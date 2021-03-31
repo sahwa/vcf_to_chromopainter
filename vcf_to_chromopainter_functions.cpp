@@ -148,18 +148,3 @@ double strparse(std::string_view s, int field, int a, int b) {
     double bd = b;
     return std::abs(ad + bd - candidates[field]);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
