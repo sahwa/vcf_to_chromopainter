@@ -56,7 +56,7 @@ chromopainteroutput = paste0(opt$output, ".chromopainter.inp")
 recomapoutput = paste0(opt$output, ".recomrates.txt")
 idfileoutput = paste0(opt$output, ".idfile.txt")
 
-Rcpp::sourceCpp("/cluster/project8/hellenthal/SamMorris/program_files/functions.cpp")
+Rcpp::sourceCpp("functions.cpp")
 cat("Successfully souced and compiled source code!\n")
 
 if (opt$uncertaintyMode == TRUE) {
