@@ -2,20 +2,18 @@
 #include <string>
 #include <sstream>
 #include <cmath>
-#include <bits/stdc++.h> 
 
 using namespace Rcpp;
-using namespace std;
 
 // double ReturnUncertainty2(Rcpp::String vcfield, int DSfield, int aa, int bb) ;
-NumericVector ReturnGenMap2(NumericMatrix recomap);
+Rcpp::NumericVector ReturnGenMap2(Rcpp::NumericMatrix recomap);
 
 // [[Rcpp::export]]
 Rcpp::NumericMatrix ReturnChromopainter(Rcpp::StringMatrix vcfGenotypes) {
 
 	int nInds = vcfGenotypes.ncol();
 	int nSnps = vcfGenotypes.nrow();
-	NumericMatrix chromopainterOutput(nInds*2, nSnps);
+	Rcpp::NumericMatrix chromopainterOutput(nInds*2, nSnps);
 	printf("Processing VCF with %d individuals at %d SNPS \n", nInds, nSnps);
 	for (int i=0; i<nSnps; i++) {
 		for (int j=0; j<nInds; j++) {
@@ -40,8 +38,8 @@ Rcpp::NumericMatrix ReturnChromopainter(Rcpp::StringMatrix vcfGenotypes) {
 double ReturnUncertainty(String vcfield, int DSfield, int aa, int bb) {
 
     std::string stdfield = vcfield; 
-    vector <string> tokensMain;
-    stringstream checkMain(stdfield);
+    std::vector <std::string> tokensMain;
+    std::stringstream checkMain(stdfield);
     std::string intermediate;  
 
     while (getline(checkMain, intermediate, ':')) { 
@@ -65,7 +63,7 @@ Rcpp::NumericMatrix ReturnChromopainterUncerainty(Rcpp::StringMatrix genotypes, 
 	int nInds = genotypes.ncol();
 	int nSnps = genotypes.nrow();
 
-	NumericMatrix chromopainterOutput(nInds*2, nSnps);
+	Rcpp::NumericMatrix chromopainterOutput(nInds*2, nSnps);
 	printf("Processing VCF with %d individuals at %d SNPS \n", nInds, nSnps);
 	printf("Running in uncertainty mode \n");
 
@@ -104,8 +102,8 @@ Rcpp::NumericMatrix ReturnChromopainterUncerainty(Rcpp::StringMatrix genotypes, 
 }
 
 // [[Rcpp::export]]
-NumericVector ReturnGenMap2(NumericMatrix recomap) {
-	NumericVector GenMap(recomap.nrow());
+Rcpp::NumericVector ReturnGenMap2(Rcpp::NumericMatrix recomap) {
+	Rcpp::NumericVector GenMap(recomap.nrow());
 	for (int i=0; i<recomap.nrow()-1; i++) {
 		long double physicaldist = recomap(i+1,0) - recomap(i,0);
 		long double gendist = recomap(i+1,1) - recomap(i,1);
@@ -128,7 +126,6 @@ double ReturnUncertainty2(Rcpp::String vcfield, int DSfield, int aa, int bb) {
 	}
 	return std::fabs(aa + bb - dose);
 }
-
 
 double strparse(std::string_view s, int field, int a, int b) {
     double candidates[3];
