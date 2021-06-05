@@ -3,7 +3,6 @@
 #### IF RUNNING IN UNCERTAINTY MODE, THERE NEEDS TO BE 2 DIFFERENT VCF FILES - ONE OF THEM CONTAINING 
 #### If you want to print a recomrates file, you must have the "CM" field in the INFO tag of the genotypes file - SHAPEIT4 does this automaticall the tag must also be exactly named  CM=x and the field seperated by ";" ##
 
-
 option_list = list(
 	optparse::make_option(c("-g", "--genotypes"), 
 		type="character", 
