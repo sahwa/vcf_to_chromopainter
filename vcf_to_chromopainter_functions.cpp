@@ -127,21 +127,21 @@ double ReturnUncertainty2(Rcpp::String vcfield, int DSfield, int aa, int bb) {
 	return std::fabs(aa + bb - dose);
 }
 
-double strparse(std::string_view s, int field, int a, int b) {
-    double candidates[3];
-    auto format = std::chars_format::fixed;
-    auto start_point = s.data();
-    auto end_point = s.data() + s.size();
-    switch (field) {
-    case 0:
-        start_point = std::from_chars(start_point, end_point, candidates[0], format);
-    case 1:
-        start_point = std::from_chars(start_point, end_point, candidates[1], format);
-    case 2:
-        start_point = std::from_chars(start_point, end_point, candidates[2], format);
-    }
+// double strparse(string_view s, int field, int a, int b) {
+//     double candidates[3];
+//     auto format = std::chars_format::fixed;
+//     auto start_point = s.data();
+//     auto end_point = s.data() + s.size();
+//     switch (field) {
+//     case 0:
+//         start_point = std::from_chars(start_point, end_point, candidates[0], format);
+//     case 1:
+//         start_point = std::from_chars(start_point, end_point, candidates[1], format);
+//     case 2:
+//         start_point = std::from_chars(start_point, end_point, candidates[2], format);
+//     }
 
-    double ad = a;
-    double bd = b;
-    return std::abs(ad + bd - candidates[field]);
-}
+//     double ad = a;
+//     double bd = b;
+//     return std::abs(ad + bd - candidates[field]);
+// }

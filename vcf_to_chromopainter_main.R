@@ -55,12 +55,31 @@ chromopainteroutput = paste0(opt$output, ".chromopainter.inp")
 recomapoutput = paste0(opt$output, ".recomrates.txt")
 idfileoutput = paste0(opt$output, ".idfile.txt")
 
-Rcpp::sourceCpp("functions.cpp")
+Rcpp::sourceCpp("vcf_to_chromopainter_functions.cpp")
 cat("Successfully souced and compiled source code!\n")
 
+
+vcf_open = gzfile(opt$genotypelikelihoods)
+
+for (block in seq(10, 1000, 10)) {
+	if (any(grepl("#CHROM", readLines(file, block)))) {
+		lineskip = which(grepl("#CHROM", readLines(file, block)))
+		break
+	}
+}
+
 if (opt$uncertaintyMode == TRUE) {
-	command = paste0("zgrep -o -a -m 1 -h -n '#CHROM' ",opt$genotypelikelihoods, " | cut -d':' -f1")
-	lineskip = as.numeric(system(command, intern=T)) - 1 
+
+	vcf_open = gzfile(opt$genotypelikelihoods)
+
+	for (block in seq(10, 1000, 10)) {
+		if (any(grepl("#CHROM", readLines(file, block)))) {
+			lineskip = which(grepl("#CHROM", readLines(file, block)))
+			break
+		}
+	}
+
+
 	start.time = Sys.time()
 	cat("Reading in genotype likelihood Data\n")
 	likelihoods = data.table::fread(opt$genotypelikelihoods, skip=lineskip)
@@ -89,8 +108,15 @@ if (opt$uncertaintyMode == TRUE) {
 	likelihoods = likelihoods[,-(1:subsetStart)]
 }
 
-command = paste0("zgrep -o -a -m 1 -h -n '#CHROM' ",opt$genotypes, " | cut -d':' -f1")
-lineskip = as.numeric(system(command, intern=T)) - 1 
+vcf_open = gzfile(opt$genotypes)
+
+for (block in seq(10, 1000, 10)) {
+	if (any(grepl("#CHROM", readLines(file, block)))) {
+		lineskip = which(grepl("#CHROM", readLines(file, block))) - 1
+		break
+	}
+}
+
 
 cat("Reading in genotype Data\n")
 genotypes = data.table::fread(opt$genotypes, skip=lineskip)
@@ -142,13 +168,19 @@ if(opt$uncertaintyMode == TRUE) {
 }
 
 ChromoPainterOutput = data.table::as.data.table(ChromoPainterOutput)
-colnames(ChromoPainterOutput) = positions
+
+binding_list = list(as.data.table(matrix(nrow=1, ncol=ncol(ChromoPainterOutput))))
+
+rbl1 = as.data.table(matrix(nrow=1, c(10, rep(NA, ncol(ChromoPainterOutput)-1))))
+rbl2 = as.data.table(matrix(nrow=1, c(20, rep(NA, ncol(ChromoPainterOutput)-1))))
+data.table::rbindlist(rbl1, rbl2, ChromoPainterOutput)
+ChromoPainterOutput = data.table::rbindlist(list(rbl1, rbl2, as.data.table(ChromoPainterOutput)))
 data.table::fwrite(ChromoPainterOutput, chromopainteroutput, sep=" ", col.names=T, row.names=F, quote=F)
 
-command = paste0("sed -i \"1i ", ncol(ChromoPainterOutput), "\" ", chromopainteroutput)
-system(command)
-command = paste0("sed -i \"1i ", nrow(ChromoPainterOutput), "\" ", chromopainteroutput)
-system(command)
+# command = paste0("sed -i \"1i ", ncol(ChromoPainterOutput), "\" ", chromopainteroutput)
+# system(command)
+# command = paste0("sed -i \"1i ", nrow(ChromoPainterOutput), "\" ", chromopainteroutput)
+# system(command)
 
 ##### makes an idfile ######
 
