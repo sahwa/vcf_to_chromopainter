@@ -29,9 +29,6 @@ option_list = list(
 opt_parser = optparse::OptionParser(option_list=option_list);
 opt = optparse::parse_args(opt_parser);
 
-# opt$genotypes = "allAncients.allModerns.chr22.PHASED2.highAccuracySNPs.subset.subsetPos.vcf.gz"
-##opt$output = "test.out"
-
 if (is.null(opt$output)){
   optparse::print_help(opt_parser)
   stop("Must supply output file name\n", call.=FALSE)
@@ -59,27 +56,9 @@ Rcpp::sourceCpp("vcf_to_chromopainter_functions.cpp")
 cat("Successfully souced and compiled source code!\n")
 
 
-vcf_open = gzfile(opt$genotypelikelihoods)
-
-for (block in seq(10, 1000, 10)) {
-	if (any(grepl("#CHROM", readLines(file, block)))) {
-		lineskip = which(grepl("#CHROM", readLines(file, block)))
-		break
-	}
-}
-
 if (opt$uncertaintyMode == TRUE) {
-
-	vcf_open = gzfile(opt$genotypelikelihoods)
-
-	for (block in seq(10, 1000, 10)) {
-		if (any(grepl("#CHROM", readLines(file, block)))) {
-			lineskip = which(grepl("#CHROM", readLines(file, block)))
-			break
-		}
-	}
-
-
+	command = paste0("zgrep -o -a -m 1 -h -n '#CHROM' ",opt$genotypelikelihoods, " | cut -d':' -f1")
+	lineskip = as.numeric(system(command, intern=T)) - 1 
 	start.time = Sys.time()
 	cat("Reading in genotype likelihood Data\n")
 	likelihoods = data.table::fread(opt$genotypelikelihoods, skip=lineskip)
@@ -108,15 +87,8 @@ if (opt$uncertaintyMode == TRUE) {
 	likelihoods = likelihoods[,-(1:subsetStart)]
 }
 
-vcf_open = gzfile(opt$genotypes)
-
-for (block in seq(10, 1000, 10)) {
-	if (any(grepl("#CHROM", readLines(file, block)))) {
-		lineskip = which(grepl("#CHROM", readLines(file, block))) - 1
-		break
-	}
-}
-
+command = paste0("zgrep -o -a -m 1 -h -n '#CHROM' ",opt$genotypes, " | cut -d':' -f1")
+lineskip = as.numeric(system(command, intern=T)) - 1 
 
 cat("Reading in genotype Data\n")
 genotypes = data.table::fread(opt$genotypes, skip=lineskip)
@@ -132,9 +104,11 @@ positions = positions$POS
 
 #### make the recombination map ###
 
+get_CM = function(a) as.numeric(stringr::str_remove(unlist(stringr::str_split(a, ";"))[stringr::str_detect(unlist(stringr::str_split(a, ";")), "CM")], "CM="))
+
 if (stringr::str_detect(genotypes$INFO[1], "CM")) {
 	cat("Found CM field - generating recombination rate file\n")
-	cM = as.numeric(stringr::str_split(stringr::str_split(string=genotypes$INFO, pattern=";", simplify=T)[,stringr::str_which(unlist(stringr::str_split(string=genotypes$INFO, pattern=";")[1]), "CM")], pattern="=", simplify=T)[,2])
+	cM = as.data.frame(sapply(genotypes$INFO, get_CM))[,1]
 	recomap = as.matrix(data.frame(pos = positions, cM = cM))
 	rates = ReturnGenMap2(recomap)
 	recomapout = as.matrix(data.table::data.table(start.pos = positions, recom.rate.perbp=rates))
@@ -169,21 +143,15 @@ if(opt$uncertaintyMode == TRUE) {
 
 ChromoPainterOutput = data.table::as.data.table(ChromoPainterOutput)
 
-binding_list = list(as.data.table(matrix(nrow=1, ncol=ncol(ChromoPainterOutput))))
-
-rbl1 = as.data.table(matrix(nrow=1, c(10, rep(NA, ncol(ChromoPainterOutput)-1))))
-rbl2 = as.data.table(matrix(nrow=1, c(20, rep(NA, ncol(ChromoPainterOutput)-1))))
-data.table::rbindlist(rbl1, rbl2, ChromoPainterOutput)
-ChromoPainterOutput = data.table::rbindlist(list(rbl1, rbl2, as.data.table(ChromoPainterOutput)))
+colnames(ChromoPainterOutput) = positions
 data.table::fwrite(ChromoPainterOutput, chromopainteroutput, sep=" ", col.names=T, row.names=F, quote=F)
 
-# command = paste0("sed -i \"1i ", ncol(ChromoPainterOutput), "\" ", chromopainteroutput)
-# system(command)
-# command = paste0("sed -i \"1i ", nrow(ChromoPainterOutput), "\" ", chromopainteroutput)
-# system(command)
+command = paste0("sed -i \"1i ", ncol(ChromoPainterOutput), "\" ", chromopainteroutput)
+system(command)
+command = paste0("sed -i \"1i ", nrow(ChromoPainterOutput), "\" ", chromopainteroutput)
+system(command)
 
 ##### makes an idfile ######
 
 idfile = data.table::data.table(V1 = colnames(genotypes), V2 = colnames(genotypes), V3 = 1)
 data.table::fwrite(idfile, idfileoutput, col.names=F, row.names=F, sep=" ", quote=F)
-
