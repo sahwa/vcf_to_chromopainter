@@ -39,24 +39,24 @@ Rcpp::NumericMatrix ReturnChromopainter(Rcpp::StringMatrix vcfGenotypes) {
 // [[Rcpp::export]]
 double ReturnUncertainty(String vcfield, int DSfield, int aa, int bb) {
 
-    std::string stdfield = vcfield; 
-    std::vector <std::string> tokensMain;
-    std::stringstream checkMain(stdfield);
-    std::string intermediate;  
+	std::string stdfield = vcfield; 
+	std::vector <std::string> tokensMain;
+	std::stringstream checkMain(stdfield);
+	std::string intermediate;  
 
-    while (getline(checkMain, intermediate, ':')) { 
-        tokensMain.push_back(intermediate); 
-    } 
-    
-    std::string DS = tokensMain[DSfield];
-    double DSf;
-    std::istringstream(DS) >> DSf;
+	while (getline(checkMain, intermediate, ':')) { 
+		tokensMain.push_back(intermediate); 
+	} 
+	
+	std::string DS = tokensMain[DSfield];
+	double DSf;
+	std::istringstream(DS) >> DSf;
 
-    double aaD = static_cast<double>(aa);
-    double bbD = static_cast<double>(bb);
+	double aaD = static_cast<double>(aa);
+	double bbD = static_cast<double>(bb);
 
-    double genoSum = aaD + bbD;
-    return abs(genoSum - DSf);
+	double genoSum = aaD + bbD;
+	return abs(genoSum - DSf);
 }
 
 // [[Rcpp::export]]
@@ -77,38 +77,38 @@ Rcpp::NumericMatrix ReturnChromopainterUncerainty(Rcpp::StringMatrix genotypes, 
 			char b = genotypes(i,_)[j][2];
 			int bb = b - '0';
 			int genosum = aa + bb;
-			           
-            std::string GPstring = split_string_n(likelihoods(i,j), ':', GPfield);
-            std::vector<double> GPvector = split_string_to_vector(GPstring, ';');
-            double max_GP = *max_element(GPvector.begin(), GPvector.end());
+					   
+			std::string GPstring = split_string_n(likelihoods(i,j), ':', GPfield);
+			std::vector<double> GPvector = split_string_to_vector(GPstring, ';');
+			double max_GP = *max_element(GPvector.begin(), GPvector.end());
 
-            double uncertainty = 1 - max_GP;
+			double uncertainty = 1 - max_GP;
 
-            double genoUncertaintyA;
-            if (aa == 0) {
-                genoUncertaintyA = 0 + uncertainty;
-            } else {
-                genoUncertaintyA = 1 - uncertainty;
-            } 
-            
-            double genoUncertaintyB;
-            if (bb == 0) {
-                genoUncertaintyB = 0 + uncertainty;
-            } else {
-                genoUncertaintyB = 1 - uncertainty;
-            }        
-            
-            if (j==0) {
-                chromopainterOutput(0, i) = genoUncertaintyA;
-                chromopainterOutput(1, i) = genoUncertaintyB;
-            } else { 
-                chromopainterOutput((j*2), i) = genoUncertaintyA;
-                chromopainterOutput(((j*2)+1), i) = genoUncertaintyB;
-            }
+			double genoUncertaintyA;
+			if (aa == 0) {
+				genoUncertaintyA = 0 + uncertainty;
+			} else {
+				genoUncertaintyA = 1 - uncertainty;
+			} 
+			
+			double genoUncertaintyB;
+			if (bb == 0) {
+				genoUncertaintyB = 0 + uncertainty;
+			} else {
+				genoUncertaintyB = 1 - uncertainty;
+			}        
+			
+			if (j==0) {
+				chromopainterOutput(0, i) = genoUncertaintyA;
+				chromopainterOutput(1, i) = genoUncertaintyB;
+			} else { 
+				chromopainterOutput((j*2), i) = genoUncertaintyA;
+				chromopainterOutput(((j*2)+1), i) = genoUncertaintyB;
+			}
 		}
 	}
 
-    return chromopainterOutput;
+	return chromopainterOutput;
 }
 
 // [[Rcpp::export]]
@@ -141,41 +141,41 @@ double ReturnUncertainty2(Rcpp::String vcfield, int DSfield, int aa, int bb, int
 // [[Rcpp::export]]
 std::string split_string_n(Rcpp::String original1, char separator, int gpField) {	
 	std::string original = original1;
-    std::vector<std::string> results;
-    std::string::const_iterator start = original.begin();
-    std::string::const_iterator end = original.end();
-    std::string::const_iterator next = std::find(start, end, separator);
-    while (next != end) {
-        results.push_back(std::string(start, next));
-        start = next + 1;
-        next = std::find(start, end, separator);
-    }
-    results.push_back(std::string(start, next));
-    
-    return results[gpField];
+	std::vector<std::string> results;
+	std::string::const_iterator start = original.begin();
+	std::string::const_iterator end = original.end();
+	std::string::const_iterator next = std::find(start, end, separator);
+	while (next != end) {
+		results.push_back(std::string(start, next));
+		start = next + 1;
+		next = std::find(start, end, separator);
+	}
+	results.push_back(std::string(start, next));
+	
+	return results[gpField];
 }
 
 // [[Rcpp::export]]
 std::vector<double> split_string_to_vector(Rcpp::String original1, char separator) {
 	
 	std::string original = original1;
-    std::vector<std::string> results;
-    std::string::const_iterator start = original.begin();
-    std::string::const_iterator end = original.end();
-    std::string::const_iterator next = std::find( start, end, separator );
-    while (next != end) {
-        results.push_back(std::string(start, next));
-        start = next + 1;
-        next = std::find(start, end, separator);
-    }
-    results.push_back(std::string(start, next));
+	std::vector<std::string> results;
+	std::string::const_iterator start = original.begin();
+	std::string::const_iterator end = original.end();
+	std::string::const_iterator next = std::find( start, end, separator );
+	while (next != end) {
+		results.push_back(std::string(start, next));
+		start = next + 1;
+		next = std::find(start, end, separator);
+	}
+	results.push_back(std::string(start, next));
 
-    std::vector<double> results_double(results.size());
+	std::vector<double> results_double(results.size());
 	std::transform(results.begin(), results.end(), results_double.begin(), [](const std::string& val) {
 		return std::stod(val);
 	});
-    
-    return results_double;
+	
+	return results_double;
 }
 
 
