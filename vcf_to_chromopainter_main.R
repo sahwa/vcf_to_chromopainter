@@ -74,6 +74,7 @@ if (opt$uncertaintyMode == TRUE) {
 	format = as.character(likelihoods[1,field])
 	dsField = which(unlist(stringr::str_split(format, ":")) == "DS")
 	gtField = which(unlist(stringr::str_split(format, ":")) == "GT")
+	gpField = which(unlist(stringr::str_split(format, ":")) == "GP")
 	
 	if (length(dsField) != 1) {
 		stop("Can't find DS field in VCF! Exiting...\n", call.=FALSE)
@@ -132,7 +133,7 @@ if (stringr::str_detect(as.character(genotypes[1,1]), "/") == TRUE)  {
 
 if (opt$uncertaintyMode == TRUE) {
 	cat("Combining genotypes and likelihoods\n")
-	ChromoPainterOutput = ReturnChromopainterUncerainty(genotypes, likelihoods, dsField-1)
+	ChromoPainterOutput = ReturnChromopainterUncerainty(genotypes, likelihoods, gpField-1)
 } else {
 	ChromoPainterOutput = ReturnChromopainter(genotypes) 	
 }
