@@ -7,6 +7,8 @@ using namespace Rcpp;
 
 // double ReturnUncertainty2(Rcpp::String vcfield, int DSfield, int aa, int bb) ;
 Rcpp::NumericVector ReturnGenMap2(Rcpp::NumericMatrix recomap);
+std::string getGP(std::string const& original, char separator, int gpField);
+double getMaxGP(const std::vector<std::string>& stringVector);
 
 // [[Rcpp::export]]
 Rcpp::NumericMatrix ReturnChromopainter(Rcpp::StringMatrix vcfGenotypes) {
@@ -58,7 +60,7 @@ double ReturnUncertainty(String vcfield, int DSfield, int aa, int bb) {
 }
 
 // [[Rcpp::export]]
-Rcpp::NumericMatrix ReturnChromopainterUncerainty(Rcpp::StringMatrix genotypes, Rcpp::StringMatrix likelihoods, int DSfield) {
+Rcpp::NumericMatrix ReturnChromopainterUncerainty(Rcpp::StringMatrix genotypes, Rcpp::StringMatrix likelihoods, int DSfield, int GPfield) {
 
 	int nInds = genotypes.ncol();
 	int nSnps = genotypes.nrow();
@@ -75,19 +77,25 @@ Rcpp::NumericMatrix ReturnChromopainterUncerainty(Rcpp::StringMatrix genotypes, 
 			char b = genotypes(i,_)[j][2];
 			int bb = b - '0';
 			int genosum = aa + bb;
-            double uncertainty = ReturnUncertainty(likelihoods(i,j), DSfield, aa, bb);
+            
+            std::string GP = getGP(likelihoods(i,j), ":", GPfield)
+
+            // double uncertainty = ReturnUncertainty_MaxGP(likelihoods(i,j))
+
             double genoUncertaintyA;
             if (aa == 0) {
                 genoUncertaintyA = 0 + uncertainty;
             } else {
                 genoUncertaintyA = 1 - uncertainty;
             } 
+            
             double genoUncertaintyB;
             if (bb == 0) {
                 genoUncertaintyB = 0 + uncertainty;
             } else {
                 genoUncertaintyB = 1 - uncertainty;
             }        
+            
             if (j==0) {
                 chromopainterOutput(0, i) = genoUncertaintyA;
                 chromopainterOutput(1, i) = genoUncertaintyB;
@@ -113,7 +121,8 @@ Rcpp::NumericVector ReturnGenMap2(Rcpp::NumericMatrix recomap) {
 	return GenMap;
 }
 
-double ReturnUncertainty2(Rcpp::String vcfield, int DSfield, int aa, int bb) {
+// [[Rcpp::export]]
+double ReturnUncertainty2(Rcpp::String vcfield, int DSfield, int aa, int bb, int gpField) {
 	std::string stdfield = vcfield;
 	std::stringstream checkMain(stdfield);
 	double dose = 0;
@@ -125,6 +134,30 @@ double ReturnUncertainty2(Rcpp::String vcfield, int DSfield, int aa, int bb) {
 		}
 	}
 	return std::fabs(aa + bb - dose);
+}
+
+std::string getGP(Rcpp::String original1, char separator, int gpField) {
+    std::string original = original1;
+    std::vector<std::string> results;
+    std::string::const_iterator start = original.begin();
+    std::string::const_iterator end = original.end();
+    std::string::const_iterator next = std::find( start, end, separator );
+    while ( next != end ) {
+        results.push_back( std::string( start, next ) );
+        start = next + 1;
+        next = std::find( start, end, separator );
+    }
+    results.push_back(std::string(start, next));
+    return results[gpField];
+}
+
+double getMaxGP(const std::vector<std::string>& stringVector) {
+	std::vector<double> doubleVector(stringVector.size());
+	std::transform(stringVector.begin(), stringVector.end(), doubleVector.begin(), [](const std::string& val) {
+        return stod(val);
+    });
+    double max = *max_element(doubleVector.begin(), doubleVector.end());
+	return max;
 }
 
 // double strparse(string_view s, int field, int a, int b) {
