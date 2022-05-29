@@ -2,7 +2,7 @@
 #include <string>
 #include <sstream>
 #include <cmath>
-#include <vcf_to_chromopainter_functions.h>
+#include <../include/vcf_to_chromopainter_functions.h>
 
 using namespace Rcpp;
 
