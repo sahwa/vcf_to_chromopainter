@@ -37,3 +37,19 @@ Rscript vcf_to_chromopainter_main.R \
   -u TRUE \ 
   -o a1
   ```
+This format is for an unreleased version of ChromoPainter. If you want to make the input for ChromoPainter V2 (which is very likely), then run the above script like this:
+
+```
+Rscript vcf_to_chromopainter_main.R \
+  -g input.vcf \ ## this file should contain phased genotypes (e.g. '0|1')
+  -u FALSE \ 
+  -o output
+```
+
+And then run:
+
+```
+sed -i '1,3!s/ //g' output.chromompainter.inp # or replace this with whatever the filename is
+```
+
+
