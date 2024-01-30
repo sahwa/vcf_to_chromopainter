@@ -61,10 +61,8 @@ double GetHaploidDosage(std::vector<double> GPvector, std::string MaxPhased) {
     // haploid dosages according to Ringbauer
     double p00, p01, p10, p11;
     double a1, a2;
-
     p00 = GPvector[0];
     p11 = GPvector[2];
-
     auto maxIt = std::max_element(GPvector.begin(), GPvector.end());
     double maxValue = *maxIt;
     auto maxIndex = std::distance(GPvector.begin(), maxIt);
@@ -80,10 +78,8 @@ double GetHaploidDosage(std::vector<double> GPvector, std::string MaxPhased) {
         p01 = GPvector[1] / 2;
         p10 = GPvector[1] / 2;
     }
-
     a1 = p11 + p10;
     a2 = p11 + p01;
-
     return a1;
 }
 
