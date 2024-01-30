@@ -2,6 +2,7 @@
 #include <string>
 #include <sstream>
 #include <cmath>
+#include <algorithm>
 #include <../include/vcf_to_chromopainter_functions.h>
 
 using namespace Rcpp;
@@ -56,6 +57,38 @@ double ReturnUncertainty(String vcfield, int DSfield, int aa, int bb) {
 }
 
 // [[Rcpp::export]]
+double GetHaploidDosage(std::vector<double> GPvector, std::string MaxPhased) {
+    // haploid dosages according to Ringbauer
+    double p00, p01, p10, p11;
+    double a1, a2;
+
+    p00 = GPvector[0];
+    p11 = GPvector[2];
+
+    auto maxIt = std::max_element(GPvector.begin(), GPvector.end());
+    double maxValue = *maxIt;
+    auto maxIndex = std::distance(GPvector.begin(), maxIt);
+    if (maxIndex == 1) { // i.e. if max likelihood unphased geno is het
+        if (MaxPhased == "0|1") {
+            p01 = GPvector[1];
+            p10 = 0;
+        } else {
+            p01 = 0;
+            p10 = GPvector[1];
+        } // Closing bracket for the else block
+    } else {
+        p01 = GPvector[1] / 2;
+        p10 = GPvector[1] / 2;
+    }
+
+    a1 = p11 + p10;
+    a2 = p11 + p01;
+
+    return a1;
+}
+
+
+// [[Rcpp::export]]
 Rcpp::NumericMatrix ReturnChromopainterUncerainty(Rcpp::StringMatrix genotypes, Rcpp::StringMatrix likelihoods, int GPfield) {
 
 	int nInds = genotypes.ncol();
@@ -75,6 +108,7 @@ Rcpp::NumericMatrix ReturnChromopainterUncerainty(Rcpp::StringMatrix genotypes, 
 			int genosum = aa + bb;
 					   
 			std::string GPstring = split_string_n(likelihoods(i,j), ':', GPfield);
+
 			std::vector<double> GPvector = split_string_to_vector(GPstring, ';');
 			double max_GP = *max_element(GPvector.begin(), GPvector.end());
 
