@@ -3,6 +3,7 @@
 #include <sstream>
 #include <cmath>
 #include <algorithm>
+#include <utility>
 #include <../include/vcf_to_chromopainter_functions.h>
 
 using namespace Rcpp;
@@ -33,6 +34,7 @@ Rcpp::NumericMatrix ReturnChromopainter(Rcpp::StringMatrix vcfGenotypes) {
 	return chromopainterOutput;
 }
 
+// dont need this any more but keep just in case
 // [[Rcpp::export]]
 double ReturnUncertainty(String vcfield, int DSfield, int aa, int bb) {
 
@@ -57,7 +59,7 @@ double ReturnUncertainty(String vcfield, int DSfield, int aa, int bb) {
 }
 
 // [[Rcpp::export]]
-double GetHaploidDosage(std::vector<double> GPvector, std::string MaxPhased) {
+Rcpp::NumericVector GetHaploidDosage(std::vector<double> GPvector, std::string MaxPhased) {
     // haploid dosages according to Ringbauer
     double p00, p01, p10, p11;
     double a1, a2;
@@ -80,13 +82,12 @@ double GetHaploidDosage(std::vector<double> GPvector, std::string MaxPhased) {
     }
     a1 = p11 + p10;
     a2 = p11 + p01;
-    return a1;
+    return Rcpp::NumericVector::create(a1, a2);
 }
 
 
 // [[Rcpp::export]]
 Rcpp::NumericMatrix ReturnChromopainterUncerainty(Rcpp::StringMatrix genotypes, Rcpp::StringMatrix likelihoods, int GPfield) {
-
 	int nInds = genotypes.ncol();
 	int nSnps = genotypes.nrow();
 
@@ -97,43 +98,15 @@ Rcpp::NumericMatrix ReturnChromopainterUncerainty(Rcpp::StringMatrix genotypes, 
 	for (int i=0; i<nSnps; i++) {
 		// printf("Processing SNP %d\n", i);
 		for (int j=0; j<nInds; j++) {
-			char a = genotypes(i,_)[j][0];
-			int aa = a - '0';
-			char b = genotypes(i,_)[j][2];
-			int bb = b - '0';
-			int genosum = aa + bb;
-					   
+            std::string PhasedGP = Rcpp::as<std::string>(genotypes(i, j));
 			std::string GPstring = split_string_n(likelihoods(i,j), ':', GPfield);
-
 			std::vector<double> GPvector = split_string_to_vector(GPstring, ';');
 			double max_GP = *max_element(GPvector.begin(), GPvector.end());
-
-			double uncertainty = 1 - max_GP;
-
-			double genoUncertaintyA;
-			if (aa == 0) {
-				genoUncertaintyA = 0 + uncertainty;
-			} else {
-				genoUncertaintyA = 1 - uncertainty;
-			} 
-			
-			double genoUncertaintyB;
-			if (bb == 0) {
-				genoUncertaintyB = 0 + uncertainty;
-			} else {
-				genoUncertaintyB = 1 - uncertainty;
-			}        
-			
-			if (j==0) {
-				chromopainterOutput(0, i) = genoUncertaintyA;
-				chromopainterOutput(1, i) = genoUncertaintyB;
-			} else { 
-				chromopainterOutput((j*2), i) = genoUncertaintyA;
-				chromopainterOutput(((j*2)+1), i) = genoUncertaintyB;
-			}
+            auto dosage = GetHaploidDosage(GPvector, PhasedGP); 
+            chromopainterOutput((j*2), i) = dosage[0];
+            chromopainterOutput(((j*2)+1), i) = dosage[1];
 		}
 	}
-
 	return chromopainterOutput;
 }
 
@@ -149,6 +122,7 @@ Rcpp::NumericVector ReturnGenMap2(Rcpp::NumericMatrix recomap) {
 	return GenMap;
 }
 
+// also dont need this any more 
 // [[Rcpp::export]]
 double ReturnUncertainty2(Rcpp::String vcfield, int DSfield, int aa, int bb, int gpField) {
 	std::string stdfield = vcfield;
@@ -205,6 +179,7 @@ std::vector<double> split_string_to_vector(Rcpp::String original1, char separato
 }
 
 
+// dont need either of these either 
 // // [[Rcpp::export]]
 // double getMaxGP(const std::vector<std::string>& stringVector) {
 // 	std::vector<double> doubleVector(stringVector.size());
