@@ -89,7 +89,7 @@ Rcpp::NumericVector GetHaploidDosage(std::vector<double> GPvector,
 // [[Rcpp::export]]
 Rcpp::NumericMatrix
 ReturnChromopainterUncerainty(Rcpp::StringMatrix genotypes,
-                              Rcpp::StringMatrix likelihoods, int GPfield) {
+                              Rcpp::StringMatrix likelihoods, int GPfield, char seperator) {
   int nInds = genotypes.ncol();
   int nSnps = genotypes.nrow();
 
@@ -102,7 +102,7 @@ ReturnChromopainterUncerainty(Rcpp::StringMatrix genotypes,
     for (int j = 0; j < nInds; j++) {
       std::string PhasedGP = Rcpp::as<std::string>(genotypes(i, j));
       std::string GPstring = split_string_n(likelihoods(i, j), ':', GPfield);
-      std::vector<double> GPvector = split_string_to_vector(GPstring, ';');
+      std::vector<double> GPvector = split_string_to_vector(GPstring, seperator);
       double max_GP = *max_element(GPvector.begin(), GPvector.end());
       auto dosage = GetHaploidDosage(GPvector, PhasedGP);
       chromopainterOutput((j * 2), i) = dosage[0];

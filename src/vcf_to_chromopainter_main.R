@@ -21,7 +21,7 @@ option_list = list(
 	optparse::make_option(c("-o", "--output"), 
 		type="character", 
 		default=NULL, 
-		help="Output file path. no default - required", 
+		help="Output file stem. no default - required", 
 		metavar="character"),
     optparse::make_option(c("-m", "--genmap"),
     	type="character",
@@ -35,12 +35,12 @@ parse_args = function() {
 	opt_parser = optparse::OptionParser(option_list=option_list);
 	opt = optparse::parse_args(opt_parser);
 
-	if (is.null(opt$output)){
+	if (is.null(opt$output)) {
 	  optparse::print_help(opt_parser)
 	  stop("Must supply output file name\n", call.=FALSE)
 	}
 
-	if (is.null(opt$genotypes)){
+	if (is.null(opt$genotypes)) {
 	  optparse::print_help(opt_parser)
 	  stop("At least one argument must be supplied (input file)\n", call.=FALSE)
 	}
@@ -66,12 +66,13 @@ source_cpp_f = function() {
 }
 
 make_recombination_map = function(geneticmap, positions) {
+	genmap = fread(geneticmap)
 	positions = sort(positions)
-	data.table(start.pos = pos, recom.rate.perbp = approx(x = geneticmap$V4, y = geneticmap$V3, xout = positions)$y)
+	data.table(start.pos = positions, recom.rate.perbp = approx(x = genmap$V4, y = genmap$V3, xout = positions)$y)
 }
 
 readVCF = function(likelihoods_file) {
-	fread(cmd=paste("zgrep -v '^##'", likelihoods_file))
+	fread(cmd = paste("zgrep -v '^##'", likelihoods_file))
 }
 
 getDSField = function(formatField){
@@ -86,72 +87,79 @@ getGPField = function(formatField){
 	str_which(str_split_1(formatField, ":"), "GP")
 }
 
-processGenotypeLikelihoods = function(filename) {
-	## read in genotype likelihoods 
-	likelihoods = readVCF(filename)
-	if (colnames(likelihoods)[1] != "#CHROM") {
-		stop("First field isn't chromosome - skipped the wrong number of lines? Exiting....")
-	}
-	field = grep("GP", likelihoods[1,])
-	format = as.character(likelihoods[1,..field])
-	dsField = getDSField(format)
-	gtField = getGTField(format)
-	gpField = getGPField(format)
-
-	GLpositions = likelihoods$POS
-	subsetStart = which(colnames(likelihoods) == "FORMAT")
-	dropcols = colnames(likelihoods)[1:subsetStart]
-	likelihoods[, (dropcols) := NULL]
-
-}
-
 processGenotypes = function(filename) {
-	## read in genotype likelihoods 
+	genotypes = readVCF(filename)
+	POS = genotypes$POS
+	if (colnames(genotypes)[1] != "#CHROM") {
+		stop("First field isn't chromosome - skipped the wrong number of lines? Exiting....")
+	}
+	subsetStart = which(colnames(genotypes) == "FORMAT")
+	dropcols = colnames(genotypes)[1:subsetStart]
+	list(POS, genotypes[, (dropcols) := NULL])
+}
+
+processGenotypeLikelihoods = function(filename) {
 	likelihoods = readVCF(filename)
 	if (colnames(likelihoods)[1] != "#CHROM") {
 		stop("First field isn't chromosome - skipped the wrong number of lines? Exiting....")
 	}
-	subsetStart = which(colnames(likelihoods) == "FORMAT")
-	dropcols = colnames(likelihoods)[1:subsetStart]
-	likelihoods[, (dropcols) := NULL]
-
-}
-
-processGenotypeLikelihoods = function(filename) {
-	## read in genotype likelihoods 
-	likelihoods = readGLs(filename)
-	if (colnames(likelihoods)[1] != "#CHROM") {
-		stop("First field isn't chromosome - skipped the wrong number of lines? Exiting....")
-	}
-	field = grep("GP", likelihoods[1,])
+	field = str_which(likelihoods[1,], "GP")
 	format = as.character(likelihoods[1,..field])
 	dsField = getDSField(format)
 	gtField = getGTField(format)
 	gpField = getGPField(format)
-
 	GLpositions = likelihoods$POS
 	subsetStart = which(colnames(likelihoods) == "FORMAT")
 	dropcols = colnames(likelihoods)[1:subsetStart]
-	likelihoods[, (dropcols) := NULL]
-
+	likelihoods = likelihoods[, (dropcols) := NULL]
+	field1 = likelihoods[1,1]
+	gpField1 = str_split_1(as.character(field1), ":")[gpField]
+	gpdelim = gpField1 %>% str_remove_all("\\.") %>% str_extract("[:punct:]")
+	list(likelihoods, gpdelim, gpField-1)
 }
 
 
+###################### Do stuff ##############################################
 
+parse_args()
 
+CPoutname = paste0(opt$output, ".chromopainter.inp")
+recomratesoutname = paste0(opt$output, ".recomrates.txt")
+idfileout = paste0(opt$output, ".idfile.txt")
 
+GTs = processGenotypes(opt$genotypes)
+POS = GTs[[1]]
+GTs = GTs[[2]]
 
-########################################################################################
+recomap = make_recombination_map(opt$genmap, POS)
+fwrite(recomap, recomratesoutname, sep=" ")
+
+idfile = data.table(V1 = colnames(GTs), V2 = colnames(GTs), V3 = 1)
+fwrite(idfile, idfileout, sep=" ")
 
 if (opt$uncertaintyMode) {
 	GLs = processGenotypeLikelihoods(opt$genotypelikelihoods)
-	GTs = processGenotypes(opt$genotypes)
-	CPout = ReturnChromopainterUncerainty(GTs, GLs, )
-	recomap = make_recombination_map(geneticmap, positions)
+	gpdelim = GLs[[2]]
+	GPfield = GLs[[3]]
+	GLs = GLs[[1]]
+	CPout = ReturnChromopainterUncerainty(as.matrix(GTs), as.matrix(GLs), GPfield, gpdelim)
+	POS[1] = paste0("P ", POS[1])
+	colnames(CPout) = POS
+	fwrite(CPout, opt$output, sep=" ", quote=F)
 }
 
 if (!opt$uncertaintyMode) {
-	GTs = processGenotypes(opt$genotypes)
-	CPout = ReturnChromopainterUncerainty(GTs, GLs, )
-	recomap = make_recombination_map(geneticmap, positions)
+	CPout = ReturnChromopainter(as.matrix(GTs))
+	CPout = as.data.table(CPout)
+	CPout = CPout[, combined := do.call(paste, c(.SD, sep = ""))][, "combined", with=F]
+	POS[1] = paste0("P POS[1]")
+	CPout = rbindlist(list(data.table(combined = paste(POS, collapse=" ")), CPout))
+	fwrite(CPout, opt$output, sep = "\n", col.names = FALSE, quote = FALSE)
 }
+
+CPoutfile = readLines(opt$output)
+headlines = paste0(length(POS), "\n", ncol(GTs) * 2)
+CPoutfile = c(headlines, CPoutfile)
+writeLines(CPoutfile, opt$output)
+
+cat("Completed!\n")
