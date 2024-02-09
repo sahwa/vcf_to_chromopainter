@@ -70,97 +70,88 @@ make_recombination_map = function(geneticmap, positions) {
 	data.table(start.pos = pos, recom.rate.perbp = approx(x = geneticmap$V4, y = geneticmap$V3, xout = positions)$y)
 }
 
-readGLs = function(likelihoods_file) {
+readVCF = function(likelihoods_file) {
 	fread(cmd=paste("zgrep -v '^##'", likelihoods_file))
 }
 
 getDSField = function(formatField){
-	str_which(formatField, "DS")
+	str_which(str_split_1(formatField, ":"), "DS")
 }
 
 getGTField = function(formatField){
-	str_which(formatField, "GT")
+	str_which(str_split_1(formatField, ":"), "GT")
 }
 
-geGPField = function(formatField){
-	str_which(formatField, "GP")
+getGPField = function(formatField){
+	str_which(str_split_1(formatField, ":"), "GP")
 }
 
+processGenotypeLikelihoods = function(filename) {
+	## read in genotype likelihoods 
+	likelihoods = readVCF(filename)
+	if (colnames(likelihoods)[1] != "#CHROM") {
+		stop("First field isn't chromosome - skipped the wrong number of lines? Exiting....")
+	}
+	field = grep("GP", likelihoods[1,])
+	format = as.character(likelihoods[1,..field])
+	dsField = getDSField(format)
+	gtField = getGTField(format)
+	gpField = getGPField(format)
 
-likelihoods = readGLs(opt$genotypelikelihoods)
-if (colnames(likelihoods)[1] != "#CHROM") {
-	stop("First field isn't chromosome - skipped the wrong number of lines? Exiting....")
-}
-field = grep("GP", likelihoods[1,])
-format = as.character(likelihoods[1,field])
-dsField = getDSField(format)
-gtField = getGTField(format)
-gpField = geGPField(format)
-
-GLpositions = likelihoods$POS
-subsetStart = which(colnames(likelihoods) == "FORMAT")
-dropcols = colnames(likelihoods)[1:subsetStart]
-likelihoods[, (dropcols) := NULL]
-
-command = paste0("zgrep -o -a -m 1 -h -n '#CHROM' ",opt$genotypes, " | cut -d':' -f1")
-lineskip = as.numeric(system(command, intern=T)) - 1 
-
-cat("Reading in genotype Data\n")
-genotypes = data.table::fread(opt$genotypes, skip=lineskip)
-
-
-if (colnames(genotypes)[1] != "#CHROM") {
-	stop("First field isn't chromosome - skipped the wrong number of lines? Exiting....")
-}
-
-posCol = which(colnames(genotypes) == "POS")
-positions = genotypes[,..posCol]
-positions = positions$POS
-
-#### make the recombination map ###
-
-return_interpolated_map = function(pos, genmap) {
-### use the apporx function here
+	GLpositions = likelihoods$POS
+	subsetStart = which(colnames(likelihoods) == "FORMAT")
+	dropcols = colnames(likelihoods)[1:subsetStart]
+	likelihoods[, (dropcols) := NULL]
 
 }
 
+processGenotypes = function(filename) {
+	## read in genotype likelihoods 
+	likelihoods = readVCF(filename)
+	if (colnames(likelihoods)[1] != "#CHROM") {
+		stop("First field isn't chromosome - skipped the wrong number of lines? Exiting....")
+	}
+	subsetStart = which(colnames(likelihoods) == "FORMAT")
+	dropcols = colnames(likelihoods)[1:subsetStart]
+	likelihoods[, (dropcols) := NULL]
 
-
-
-positions[1] = paste("P", positions[1])
-positions = as.character(positions)
-
-subsetStart = which(colnames(genotypes) == "FORMAT")
-genotypes = genotypes[,-(1:subsetStart)]
-genotypes = as.matrix(genotypes)
-
-
-if (stringr::str_detect(as.character(genotypes[1,1]), "/") == TRUE)  {
-	stop("Looks like input isn't phased... Exiting...")
 }
 
-if (opt$uncertaintyMode == TRUE) {
-	cat("Combining genotypes and likelihoods\n")
-	ChromoPainterOutput = ReturnChromopainterUncerainty(genotypes, likelihoods, gpField-1)
-} else {
-	ChromoPainterOutput = ReturnChromopainter(genotypes) 	
+processGenotypeLikelihoods = function(filename) {
+	## read in genotype likelihoods 
+	likelihoods = readGLs(filename)
+	if (colnames(likelihoods)[1] != "#CHROM") {
+		stop("First field isn't chromosome - skipped the wrong number of lines? Exiting....")
+	}
+	field = grep("GP", likelihoods[1,])
+	format = as.character(likelihoods[1,..field])
+	dsField = getDSField(format)
+	gtField = getGTField(format)
+	gpField = getGPField(format)
+
+	GLpositions = likelihoods$POS
+	subsetStart = which(colnames(likelihoods) == "FORMAT")
+	dropcols = colnames(likelihoods)[1:subsetStart]
+	likelihoods[, (dropcols) := NULL]
+
 }
 
-if(opt$uncertaintyMode == TRUE) {
-	ChromoPainterOutput = format(round(ChromoPainterOutput, 3), nsmall = 3)
+
+
+
+
+
+########################################################################################
+
+if (opt$uncertaintyMode) {
+	GLs = processGenotypeLikelihoods(opt$genotypelikelihoods)
+	GTs = processGenotypes(opt$genotypes)
+	CPout = ReturnChromopainterUncerainty(GTs, GLs, )
+	recomap = make_recombination_map(geneticmap, positions)
 }
 
-ChromoPainterOutput = data.table::as.data.table(ChromoPainterOutput)
-
-colnames(ChromoPainterOutput) = positions
-data.table::fwrite(ChromoPainterOutput, chromopainteroutput, sep=" ", col.names=T, row.names=F, quote=F)
-
-command = paste0("sed -i \"1i ", ncol(ChromoPainterOutput), "\" ", chromopainteroutput)
-system(command)
-command = paste0("sed -i \"1i ", nrow(ChromoPainterOutput), "\" ", chromopainteroutput)
-system(command)
-
-##### makes an idfile ######
-
-idfile = data.table::data.table(V1 = colnames(genotypes), V2 = colnames(genotypes), V3 = 1)
-data.table::fwrite(idfile, idfileoutput, col.names=F, row.names=F, sep=" ", quote=F)
+if (!opt$uncertaintyMode) {
+	GTs = processGenotypes(opt$genotypes)
+	CPout = ReturnChromopainterUncerainty(GTs, GLs, )
+	recomap = make_recombination_map(geneticmap, positions)
+}
