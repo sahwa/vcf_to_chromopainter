@@ -24,10 +24,10 @@ option_list = list(
 		help="Output file path. no default - required", 
 		metavar="character"),
     optparse::make_option(c("-m", "--genmap"),
-    	type="character",
-    	default=NULL,
-    	help="plink formatted genetic map",
-   		metavar="character")
+    type="character",
+    default=NULL,
+    help="plink formatted genetic map",
+    metavar="character")
     );
 
 parse_args = function() {
@@ -65,42 +65,37 @@ source_cpp_f = function() {
 	cat("Successfully souced and compiled source code!\n")
 }
 
-make_recombination_map = function(geneticmap, positions) {
-	positions = sort(positions)
-	data.table(start.pos = pos, recom.rate.perbp = approx(x = geneticmap$V4, y = geneticmap$V3, xout = positions)$y)
+if (opt$uncertaintyMode == TRUE) {
+	command = paste0("zgrep -o -a -m 1 -h -n '#CHROM' ",opt$genotypelikelihoods, " | cut -d':' -f1")
+	lineskip = as.numeric(system(command, intern=T)) - 1 
+	start.time = Sys.time()
+	cat("Reading in genotype likelihood Data\n")
+	likelihoods = data.table::fread(opt$genotypelikelihoods, skip=lineskip)
+	likelihoods = as.matrix(likelihoods)
+	end.time = Sys.time()
+	cat(paste("Read in genotype likelihoods in", round(end.time - start.time, 2), "seconds!\n"))
+
+	if (colnames(likelihoods)[1] != "#CHROM") {
+		stop("First field isn't chromosome - skipped the wrong number of lines? Exiting....")
+	}
+
+	field = grep("GP", likelihoods[1,])
+	format = as.character(likelihoods[1,field])
+	dsField = which(unlist(stringr::str_split(format, ":")) == "DS")
+	gtField = which(unlist(stringr::str_split(format, ":")) == "GT")
+	gpField = which(unlist(stringr::str_split(format, ":")) == "GP")
+	
+	if (length(dsField) != 1) {
+		stop("Can't find DS field in VCF! Exiting...\n", call.=FALSE)
+	} 
+
+	if (length(gtField) != 1) {
+		stop("Can't find GT field in VCF! Exiting...\n", call.=FALSE)
+	} 
+
+	subsetStart = which(colnames(likelihoods) == "FORMAT")
+	likelihoods = likelihoods[,-(1:subsetStart)]
 }
-
-readGLs = function(likelihoods_file) {
-	fread(cmd=paste("zgrep -v '^##'", likelihoods_file))
-}
-
-getDSField = function(formatField){
-	str_which(formatField, "DS")
-}
-
-getGTField = function(formatField){
-	str_which(formatField, "GT")
-}
-
-geGPField = function(formatField){
-	str_which(formatField, "GP")
-}
-
-
-likelihoods = readGLs(opt$genotypelikelihoods)
-if (colnames(likelihoods)[1] != "#CHROM") {
-	stop("First field isn't chromosome - skipped the wrong number of lines? Exiting....")
-}
-field = grep("GP", likelihoods[1,])
-format = as.character(likelihoods[1,field])
-dsField = getDSField(format)
-gtField = getGTField(format)
-gpField = geGPField(format)
-
-GLpositions = likelihoods$POS
-subsetStart = which(colnames(likelihoods) == "FORMAT")
-dropcols = colnames(likelihoods)[1:subsetStart]
-likelihoods[, (dropcols) := NULL]
 
 command = paste0("zgrep -o -a -m 1 -h -n '#CHROM' ",opt$genotypes, " | cut -d':' -f1")
 lineskip = as.numeric(system(command, intern=T)) - 1 
@@ -126,6 +121,17 @@ return_interpolated_map = function(pos, genmap) {
 
 
 
+if (stringr::str_detect(genotypes$INFO[1], "CM")) {
+	cat("Found CM field - generating recombination rate file\n")
+	cM = as.data.frame(sapply(genotypes$INFO, get_CM))[,1]
+	recomap = as.matrix(data.frame(pos = positions, cM = cM))
+	rates = ReturnGenMap2(recomap)
+	recomapout = as.matrix(data.table::data.table(start.pos = positions, recom.rate.perbp=rates))
+	format(recomapout, scientific=F)
+	data.table::fwrite(data.table::as.data.table(recomapout), recomapoutput, col.names=TRUE, row.names=FALSE, sep=" ", quote=FALSE, scipen=999)
+} else {
+	cat("Can't find CM field in INFO tag - not generating recombination rate file\n")
+}
 
 positions[1] = paste("P", positions[1])
 positions = as.character(positions)
