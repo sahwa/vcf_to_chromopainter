@@ -3,6 +3,9 @@
 #### IF RUNNING IN UNCERTAINTY MODE, THERE NEEDS TO BE 2 DIFFERENT VCF FILES - ONE OF THEM CONTAINING 
 #### If you want to print a recomrates file, you must have the "CM" field in the INFO tag of the genotypes file - SHAPEIT4 does this automaticall the tag must also be exactly named  CM=x and the field seperated by ";" ##
 
+library(data.table)
+library(stringr)
+
 option_list = list(
 	optparse::make_option(c("-g", "--genotypes"), 
 		type="character", 
@@ -23,41 +26,12 @@ option_list = list(
 		default=NULL, 
 		help="Output file stem. no default - required", 
 		metavar="character"),
-    optparse::make_option(c("-m", "--genmap"),
-    	type="character",
-    	default=NULL,
-    	help="plink formatted genetic map",
-   		metavar="character")
+	optparse::make_option(c("-m", "--genmap"),
+		type="character",
+		default=NULL,
+		help="plink formatted genetic map",
+		metavar="character")
     );
-
-parse_args = function() {
-
-	opt_parser = optparse::OptionParser(option_list=option_list);
-	opt = optparse::parse_args(opt_parser);
-
-	if (is.null(opt$output)) {
-	  optparse::print_help(opt_parser)
-	  stop("Must supply output file name\n", call.=FALSE)
-	}
-
-	if (is.null(opt$genotypes)) {
-	  optparse::print_help(opt_parser)
-	  stop("At least one argument must be supplied (input file)\n", call.=FALSE)
-	}
-
-	if (opt$uncertaintyMode == TRUE) {
-		cat("Running in Uncertainty mode!\n")
-	}
-
-	if (opt$uncertaintyMode == TRUE && is.null(opt$genotypelikelihoods) == TRUE) {
-		optparse::print_help(opt_parser)
-		stop("Must supply genotype likelihoods if running in uncertainty mode\n", call.=FALSE)
-	}
-
-	chromopainteroutput = paste0(opt$output, ".chromopainter.inp")
-	recomapoutput = paste0(opt$output, ".recomrates.txt")
-	idfileoutput = paste0(opt$output, ".idfile.txt")
-}
 
 
 source_cpp_f = function() {
@@ -121,11 +95,34 @@ processGenotypeLikelihoods = function(filename) {
 
 ###################### Do stuff ##############################################
 
-parse_args()
+opt_parser = optparse::OptionParser(option_list=option_list);
+opt = optparse::parse_args(opt_parser);
+
+if (is.null(opt$output)) {
+	optparse::print_help(opt_parser)
+	stop("Must supply output file name\n", call.=FALSE)
+	}
+
+if (is.null(opt$genotypes)) {
+	optparse::print_help(opt_parser)
+		stop("At least one argument must be supplied (input file)\n", call.=FALSE)
+	}
+
+if (opt$uncertaintyMode == TRUE) {
+	cat("Running in Uncertainty mode!\n")
+}
+
+if (opt$uncertaintyMode == TRUE && is.null(opt$genotypelikelihoods) == TRUE) {
+	optparse::print_help(opt_parser)
+	stop("Must supply genotype likelihoods if running in uncertainty mode\n", call.=FALSE)
+}
 
 CPoutname = paste0(opt$output, ".chromopainter.inp")
 recomratesoutname = paste0(opt$output, ".recomrates.txt")
 idfileout = paste0(opt$output, ".idfile.txt")
+
+source_cpp_f()
+
 
 GTs = processGenotypes(opt$genotypes)
 POS = GTs[[1]]
