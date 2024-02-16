@@ -64,6 +64,7 @@ Rcpp::NumericVector GetHaploidDosage(std::vector<double> GPvector,
   // haploid dosages according to Ringbauer
   double p00, p01, p10, p11;
   double a1, a2;
+	
   p00 = GPvector[0];
   p11 = GPvector[2];
   auto maxIt = std::max_element(GPvector.begin(), GPvector.end());
@@ -83,6 +84,14 @@ Rcpp::NumericVector GetHaploidDosage(std::vector<double> GPvector,
   }
   a1 = p11 + p10;
   a2 = p11 + p01;
+	// sometimes there is weird case where the sum of GPvector is greater than 1. 
+	// simple and dumb fix is just to reduce either a1 or a2 to 1 if they exceed 1
+	if (a1 > 1) a1 = 1;
+  if (a2 > 1) a2 = 1;
+	// similarly if they are less than zero, just make them zero
+	// not sure why this would ever happen but just in case
+	if (a1 < 0) a1 = 0;	
+	if (a2 < 0) a2 = 0;
   return Rcpp::NumericVector::create(a1, a2);
 }
 
