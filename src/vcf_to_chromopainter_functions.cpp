@@ -64,7 +64,6 @@ Rcpp::NumericVector GetHaploidDosage(std::vector<double> GPvector,
   // haploid dosages according to Ringbauer
   double p00, p01, p10, p11;
   double a1, a2;
-	
   p00 = GPvector[0];
   p11 = GPvector[2];
   auto maxIt = std::max_element(GPvector.begin(), GPvector.end());
