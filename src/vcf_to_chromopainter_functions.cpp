@@ -84,8 +84,8 @@ Rcpp::NumericVector GetHaploidDosage(std::vector<double> GPvector,
   }
   a1 = p11 + p10;
   a2 = p11 + p01;
-	// sometimes there is weird case where the sum of GPvector is greater than 1. 
-	// simple and dumb fix is just to reduce either a1 or a2 to 1 if they exceed 1
+  // sometimes there is weird case where the sum of GPvector is greater than 1. 
+  // simple and dumb fix is just to reduce either a1 or a2 to 1 if they exceed 1
 	if (a1 > 1) a1 = 1;
   if (a2 > 1) a2 = 1;
 	// similarly if they are less than zero, just make them zero
