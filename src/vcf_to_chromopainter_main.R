@@ -40,11 +40,13 @@ source_cpp_f = function() {
 }
 
 make_recombination_map = function(geneticmap, positions) {
-	genmap = fread(geneticmap)
-	positions = sort(positions)
-	data.table(start.pos = positions, recom.rate.perbp = approx(x = genmap$V4, y = genmap$V3, xout = positions)$y)
+  genmap = fread(geneticmap)
+  positions = sort(positions)
+  recomrates = data.table(start.pos = positions, approx_morgans = approx(x = genmap$V4, y = genmap$V3, xout = positions)$y)
+  recomrates[, recom.rate.perbp := c(diff(approx_morgans) / diff(positions), 0)]
+  recomrates[, approx_morgans := NULL]
+  recomrates
 }
-
 readVCF = function(likelihoods_file) {
 	fread(cmd = paste("zgrep -v '^##'", likelihoods_file))
 }
